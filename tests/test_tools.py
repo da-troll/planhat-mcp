@@ -4,16 +4,10 @@ All HTTP is mocked — these tests never touch the live Planhat API and need no 
 """
 
 import importlib
-import os
-import sys
-from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-os.environ.setdefault("PLANHAT_TOKEN", "test-token")
-
-import planhat_mcp  # noqa: E402
+import planhat_mcp
 
 
 class FakeResponse:

@@ -13,8 +13,12 @@ BASE_URL = "https://api.planhat.com"
 REQUEST_TIMEOUT = (3.05, 30)  # seconds (connect, read)
 
 
+def _flag_value(raw: str) -> bool:
+    return raw.strip().lower() in ("1", "true", "yes")
+
+
 def _flag(name: str) -> bool:
-    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes")
+    return _flag_value(os.environ.get(name, ""))
 
 
 READ_ONLY = _flag("PLANHAT_READ_ONLY")

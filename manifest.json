@@ -1,0 +1,60 @@
+{
+  "manifest_version": "0.4",
+  "name": "planhat-mcp",
+  "display_name": "Planhat MCP",
+  "version": "1.2.0",
+  "description": "Talk to your Planhat customer data in plain English — 60 tools across 12 CRM resource types.",
+  "long_description": "Connects Planhat, the customer success platform, to Claude. List, inspect, create, update and delete companies, contacts, opportunities, notes, conversations, users, assets, issues, tickets, tasks, licenses and invoices — directly from the conversation. Runs entirely on your machine and talks only to api.planhat.com with your own API token.",
+  "author": {
+    "name": "Daniel Tollefsen",
+    "url": "https://github.com/da-troll"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/da-troll/planhat-mcp"
+  },
+  "homepage": "https://github.com/da-troll/planhat-mcp",
+  "documentation": "https://github.com/da-troll/planhat-mcp#readme",
+  "license": "MIT",
+  "keywords": ["planhat", "crm", "customer-success", "api"],
+  "server": {
+    "type": "uv",
+    "entry_point": "planhat_mcp.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": ["run", "--no-dev", "--directory", "${__dirname}", "planhat_mcp.py"],
+      "env": {
+        "PLANHAT_TOKEN": "${user_config.planhat_token}",
+        "PLANHAT_READ_ONLY": "${user_config.read_only}",
+        "PLANHAT_DISABLE_DELETE": "${user_config.disable_delete}"
+      }
+    }
+  },
+  "tools_generated": true,
+  "user_config": {
+    "planhat_token": {
+      "type": "string",
+      "title": "Planhat API token",
+      "description": "Created in Planhat under Settings → Service Accounts (Private Apps) → API Access Token. Stored securely in your system keychain.",
+      "sensitive": true,
+      "required": true
+    },
+    "read_only": {
+      "type": "boolean",
+      "title": "Read-only mode",
+      "description": "Only allow reading Planhat data — no creating, updating or deleting.",
+      "default": false,
+      "required": false
+    },
+    "disable_delete": {
+      "type": "boolean",
+      "title": "Disable delete tools",
+      "description": "Allow reading, creating and updating, but never deleting records.",
+      "default": false,
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"]
+  }
+}
