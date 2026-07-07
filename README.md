@@ -12,11 +12,13 @@
 Struggling to make Planhat's hosted MCP work? Custom connector in Claude that won't connect, or an OAuth login that never completes once it does? 
 
 Here's your answer: a [Model Context Protocol](https://modelcontextprotocol.io) server for [Planhat](https://www.planhat.com) that runs on your own machine and authenticates with a plain API token — no OAuth flow, no connector setup, nothing to host. Add it to Claude Desktop — or any other MCP client — and ask for what you need:
+
 > *"Which companies have licenses renewing this quarter?"*
 > 
 > *"Create a task for me to follow up with Acme Corp next week."*
 > 
 > *"Summarize the open tickets for our top five accounts."*
+
 
 Claude reads and updates Planhat directly, live from the conversation. No dashboards, no exports, no SQL.
 
