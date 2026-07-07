@@ -1,0 +1,23 @@
+# Security
+
+## Token handling
+
+- Your `PLANHAT_TOKEN` grants real read/write access to your Planhat tenant.
+  It lives only in the local `.env` file, which is gitignored and never leaves
+  your machine. The server sends it only to `https://api.planhat.com` over TLS.
+- Prefer a **dedicated service-account token with the narrowest permissions**
+  you need. A read-only token makes every mutating tool fail safely.
+- If a token is ever exposed (committed, pasted into a chat, logged), rotate it
+  in Planhat immediately — revoke the old token, don't just create a new one.
+
+## Scope of this software
+
+- Runs locally over stdio; opens no network ports and accepts no inbound
+  connections.
+- Talks to exactly one host: `api.planhat.com`.
+- No telemetry, no analytics, no third-party services.
+
+## Reporting a vulnerability
+
+Open a [GitHub security advisory](https://github.com/da-troll/planhat-mcp/security/advisories/new)
+or a private issue. Please do not disclose token-leak vectors publicly before a fix.

@@ -1,0 +1,28 @@
+[project]
+name = "planhat-mcp"
+version = "1.0.0"
+description = "Local MCP server that lets Claude (or any MCP client) read and update Planhat CRM data — 60 tools across 12 resource types"
+readme = "README.md"
+authors = [{ name = "Daniel Tollefsen" }]
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]>=1.2",
+    "requests>=2.31",
+    "python-dotenv>=1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 120
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

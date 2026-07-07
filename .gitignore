@@ -1,0 +1,14 @@
+# Secrets — never commit. The MCP server reads its token from .env at runtime.
+.env
+planhat-mcp-notes.md
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+uv.lock
+
+# macOS
+.DS_Store
