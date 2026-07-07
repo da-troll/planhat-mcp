@@ -4,7 +4,7 @@
 
 - Your `PLANHAT_TOKEN` grants real read/write access to your Planhat tenant.
   With the one-click bundle install it is stored in your **operating system
-  keychain** by Claude Desktop and injected into the server at launch — it
+  keychain** by Claude Desktop and injected into the server at launch; it
   never touches a file on disk. Manual installs keep it in a local `.env`
   file, which is gitignored and never leaves your machine. Either way the
   server sends it only to `https://api.planhat.com` over TLS.
@@ -14,13 +14,13 @@
   `PLANHAT_READ_ONLY=1` registers only list/get tools, and
   `PLANHAT_DISABLE_DELETE=1` removes the delete tools. Set either in `.env`.
   Ungated writes remain the default because full CRUD is this project's
-  purpose — the gates exist for users who want a hard ceiling.
+  purpose; the gates exist for users who want a hard ceiling.
 - All tools carry MCP `ToolAnnotations` (`readOnlyHint`/`destructiveHint`/
   `idempotentHint`) so permission-aware clients can prompt before destructive
-  calls and auto-approve reads. These are hints — clients enforce their own
-  approval policy; the gates and token permissions are the guarantees.
+  calls and auto-approve reads. These are hints; clients enforce their own
+  approval policy, and the gates and token permissions are the guarantees.
 - If a token is ever exposed (committed, pasted into a chat, logged), rotate it
-  in Planhat immediately — revoke the old token, don't just create a new one.
+  in Planhat immediately: revoke the old token rather than just creating a new one.
 
 ## Scope of this software
 

@@ -29,7 +29,7 @@ mcp = FastMCP("planhat-local")
 
 # Spec hints that let MCP clients calibrate their permission UX per tool:
 # reads can be auto-approved, deletes deserve a confirmation prompt. Enforcement
-# is the client's job — these are the server's half of that contract.
+# is the client's job; these are the server's half of that contract.
 _KIND_ANNOTATIONS = {
     "read": ToolAnnotations(readOnlyHint=True),
     "create": ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False),

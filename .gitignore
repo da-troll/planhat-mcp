@@ -1,4 +1,4 @@
-# Secrets — never commit. The MCP server reads its token from .env at runtime.
+# Secrets: never commit. The MCP server reads its token from .env at runtime.
 .env
 planhat-mcp-notes.md
 
@@ -9,7 +9,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
-# Built bundles — produced by CI/release, never committed
+# Built bundles: produced by CI/release, never committed
 *.mcpb
 
 # macOS

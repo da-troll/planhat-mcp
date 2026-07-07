@@ -1,5 +1,5 @@
 # Only planhat_mcp.py, pyproject.toml, uv.lock, manifest.json, LICENSE and
-# README.md belong in the distributed bundle. Everything else stays out —
+# README.md belong in the distributed bundle. Everything else stays out;
 # above all the two secret files, listed explicitly as belt-and-braces even
 # though they must never exist in a clean checkout.
 .env

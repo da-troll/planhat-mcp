@@ -1,26 +1,26 @@
 # Contributing
 
-Thanks for helping out! This is a deliberately small project — one server file,
-one test file — so contributions are easy to review if they stay that shape.
+Thanks for helping out! This is a deliberately small project (one server file,
+one test directory), so contributions are easy to review if they stay that shape.
 
 ## Before you open a PR
 
 ```bash
 uv run ruff check .    # must pass
-uv run pytest -q       # must pass — offline, no token needed
+uv run pytest -q       # must pass; offline, no token needed
 ```
 
 ## Ground rules
 
 1. **Never commit secrets.** `.env` is gitignored; keep it that way. PRs
    containing tokens are closed and the token is assumed burned.
-2. **Tests are offline.** Mock `requests` — see `tests/test_tools.py`. Do not
+2. **Tests are offline.** Mock `requests`; see `tests/test_tools.py`. Do not
    add tests (or CI steps) that hit the live Planhat API.
 3. **Don't rename or move `planhat_mcp.py`.** Its absolute path is hardcoded in
    users' Claude Desktop configs; moving it breaks every install.
-4. Read `AGENTS.md` first — it documents the Planhat API quirks (notes/tickets
-   are `/conversations`, invoice `cId`, license `_currency`, …) that have caused
-   real bugs before.
+4. Read `AGENTS.md` first: it documents the Planhat API quirks (notes/tickets
+   are `/conversations`, invoice `cId`, license `_currency`, and more) that have
+   caused real bugs before.
 
 ## Adding a new resource family
 
@@ -33,5 +33,6 @@ uv run pytest -q       # must pass — offline, no token needed
 
 ## Releases
 
-Maintainers: bump `version` in `pyproject.toml`, update `CHANGELOG.md`, then
-tag `vX.Y.Z` and push the tag — `release.yml` publishes the GitHub release.
+Maintainers: bump `version` in `pyproject.toml` and `manifest.json`, update
+`CHANGELOG.md`, then tag `vX.Y.Z` and push the tag; `release.yml` publishes the
+GitHub release with the `.mcpb` bundle attached.

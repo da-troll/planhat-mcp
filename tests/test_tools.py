@@ -1,6 +1,6 @@
 """Offline tests for every MCP tool: correct HTTP method, path, and key body fields.
 
-All HTTP is mocked — these tests never touch the live Planhat API and need no token.
+All HTTP is mocked; these tests never touch the live Planhat API and need no token.
 """
 
 import importlib
