@@ -98,6 +98,17 @@ Restart Claude Desktop, then ask it: *"List my top 3 Planhat companies."* If you
 
 Claude only ever does what you ask, and the token you create controls what it *can* touch — a read-only token makes the whole connector read-only.
 
+### Optional hardening
+
+Two switches cap what any connected AI can ever do, no matter what it's asked. Add either to your `.env` file:
+
+| Setting | Effect |
+|---|---|
+| `PLANHAT_READ_ONLY=1` | Only the list/get tools exist — nothing in Planhat can be changed. |
+| `PLANHAT_DISABLE_DELETE=1` | Everything works except deleting records. |
+
+These stack with the strongest control of all: the permissions on the Planhat token itself (see [SECURITY.md](SECURITY.md)).
+
 ## Repository layout
 
 ```

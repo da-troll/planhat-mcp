@@ -82,7 +82,17 @@ These are the traps that produced real bugs in this codebase's history:
 - Every resource family implements exactly the five verbs, in the order
   list/get/create/update/delete, under a `# ── Resource ──` banner comment.
 - HTTP goes through the module-level helpers `_get/_post/_put/_delete`;
-  responses through `_parse`. Never call `requests` directly from a tool.
+  responses through `_parse`. Never call `requests` directly from a tool. Every
+  helper passes `timeout=REQUEST_TIMEOUT` — tests assert this on every call.
+- Tools are registered with the `_tool()` decorator, never `mcp.tool()` directly:
+  `@_tool()` for list/get, `@_tool("write")` for create/update, `@_tool("delete")`
+  for delete. This is what makes the `PLANHAT_READ_ONLY` and
+  `PLANHAT_DISABLE_DELETE` env gates work — misclassifying a tool silently
+  exempts it from gating, and the registration tests will catch the count drift.
+- Every ID interpolated into a URL path goes through `_path_id()`, which rejects
+  empty strings (a blank ID would otherwise fall through to the list route) and
+  percent-encodes all reserved characters (`quote(value, safe="")`). Unreserved
+  characters pass through untouched, so `extid-…`/`srcid-…` IDs work unchanged.
 - Update tools take optional named params for the common fields plus `**kwargs`
   passed straight through to the API body, so any Planhat field is reachable
   without a code change.

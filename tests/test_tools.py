@@ -3,6 +3,7 @@
 All HTTP is mocked — these tests never touch the live Planhat API and need no token.
 """
 
+import importlib
 import os
 import sys
 from pathlib import Path
@@ -32,6 +33,7 @@ class Recorder:
     def handler(self, method):
         def call(url, headers=None, params=None, json=None, **kwargs):
             assert headers["Authorization"] == "Bearer test-token"
+            assert kwargs.get("timeout") == planhat_mcp.REQUEST_TIMEOUT, f"{method} {url} missing timeout"
             self.calls.append({"method": method, "url": url, "params": params, "json": json})
             return FakeResponse()
 
@@ -192,6 +194,79 @@ def test_update_sends_only_provided_fields(api):
 def test_kwargs_pass_through_to_body(api):
     tool("update_company")(company_id="C1", phase="onboarding")
     assert api.last["json"] == {"phase": "onboarding"}
+
+
+# ── Path-parameter safety ──────────────────────────────────────────────────────
+
+
+def test_path_ids_are_url_encoded(api):
+    tool("get_company")(company_id="../users")
+    assert api.last["url"] == f"{planhat_mcp.BASE_URL}/companies/..%2Fusers"
+
+
+def test_path_ids_cannot_smuggle_query_params(api):
+    tool("get_company")(company_id="x?limit=999")
+    assert api.last["url"] == f"{planhat_mcp.BASE_URL}/companies/x%3Flimit%3D999"
+
+
+def test_planhat_prefixed_ids_pass_through_unchanged(api):
+    tool("get_asset")(asset_id="extid-abc_123")
+    assert api.last["url"] == f"{planhat_mcp.BASE_URL}/assets/extid-abc_123"
+
+
+@pytest.mark.parametrize(
+    "name,kwarg",
+    [("get_company", "company_id"), ("update_task", "task_id"), ("delete_user", "user_id")],
+)
+@pytest.mark.parametrize("bad_id", ["", "   "])
+def test_empty_ids_are_rejected_before_any_request(api, name, kwarg, bad_id):
+    with pytest.raises(ValueError):
+        tool(name)(**{kwarg: bad_id})
+    assert api.calls == []
+
+
+# ── Env-var gating (PLANHAT_READ_ONLY / PLANHAT_DISABLE_DELETE) ────────────────
+
+ALL_TOOLS = {name for name, *_ in CASES}
+
+
+def _reload_with_env(monkeypatch, **env):
+    for key, value in env.items():
+        monkeypatch.setenv(key, value)
+    return importlib.reload(planhat_mcp)
+
+
+def _restore_default_module(monkeypatch, *keys):
+    for key in keys:
+        monkeypatch.delenv(key)
+    importlib.reload(planhat_mcp)
+
+
+def test_read_only_mode_registers_only_read_tools(monkeypatch):
+    mod = _reload_with_env(monkeypatch, PLANHAT_READ_ONLY="1")
+    try:
+        registered = set(mod.mcp._tool_manager._tools)
+        assert registered == {n for n in ALL_TOOLS if n.startswith(("list_", "get_"))}
+        assert len(registered) == 24
+    finally:
+        _restore_default_module(monkeypatch, "PLANHAT_READ_ONLY")
+
+
+def test_disable_delete_mode_registers_everything_but_deletes(monkeypatch):
+    mod = _reload_with_env(monkeypatch, PLANHAT_DISABLE_DELETE="true")
+    try:
+        registered = set(mod.mcp._tool_manager._tools)
+        assert registered == {n for n in ALL_TOOLS if not n.startswith("delete_")}
+        assert len(registered) == 48
+    finally:
+        _restore_default_module(monkeypatch, "PLANHAT_DISABLE_DELETE")
+
+
+def test_default_mode_registers_all_60_tools():
+    assert len(planhat_mcp.mcp._tool_manager._tools) == 60
+
+
+# ── Error handling ─────────────────────────────────────────────────────────────
 
 
 def test_http_error_raises(monkeypatch):

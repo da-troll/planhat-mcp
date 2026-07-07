@@ -1,4 +1,5 @@
 import os
+import urllib.parse
 from pathlib import Path
 from dotenv import load_dotenv
 import requests
@@ -8,12 +9,41 @@ load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
 PLANHAT_TOKEN = os.environ["PLANHAT_TOKEN"]
 BASE_URL = "https://api.planhat.com"
+REQUEST_TIMEOUT = (3.05, 30)  # seconds (connect, read)
+
+
+def _flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes")
+
+
+READ_ONLY = _flag("PLANHAT_READ_ONLY")
+DISABLE_DELETE = _flag("PLANHAT_DISABLE_DELETE")
 
 mcp = FastMCP("planhat-local")
 
 
+def _tool(kind: str = "read"):
+    """Register an MCP tool, honoring the PLANHAT_READ_ONLY / PLANHAT_DISABLE_DELETE gates."""
+
+    def decorate(fn):
+        if READ_ONLY and kind != "read":
+            return fn
+        if DISABLE_DELETE and kind == "delete":
+            return fn
+        return mcp.tool()(fn)
+
+    return decorate
+
+
 def _headers() -> dict:
     return {"Authorization": f"Bearer {PLANHAT_TOKEN}"}
+
+
+def _path_id(value: str) -> str:
+    """Encode a path parameter, rejecting empty IDs so a blank never falls through to a list route."""
+    if not value or not value.strip():
+        raise ValueError("ID must be a non-empty string")
+    return urllib.parse.quote(value, safe="")
 
 
 def _parse(r: requests.Response) -> dict:
@@ -29,22 +59,22 @@ def _parse(r: requests.Response) -> dict:
 
 
 def _get(path: str, params: dict | None = None) -> dict:
-    r = requests.get(f"{BASE_URL}{path}", headers=_headers(), params=params or {})
+    r = requests.get(f"{BASE_URL}{path}", headers=_headers(), params=params or {}, timeout=REQUEST_TIMEOUT)
     return _parse(r)
 
 
 def _post(path: str, body: dict) -> dict:
-    r = requests.post(f"{BASE_URL}{path}", headers=_headers(), json=body)
+    r = requests.post(f"{BASE_URL}{path}", headers=_headers(), json=body, timeout=REQUEST_TIMEOUT)
     return _parse(r)
 
 
 def _put(path: str, body: dict) -> dict:
-    r = requests.put(f"{BASE_URL}{path}", headers=_headers(), json=body)
+    r = requests.put(f"{BASE_URL}{path}", headers=_headers(), json=body, timeout=REQUEST_TIMEOUT)
     return _parse(r)
 
 
 def _delete(path: str) -> dict:
-    r = requests.delete(f"{BASE_URL}{path}", headers=_headers())
+    r = requests.delete(f"{BASE_URL}{path}", headers=_headers(), timeout=REQUEST_TIMEOUT)
     if not r.ok:
         raise RuntimeError(f"HTTP {r.status_code} {r.reason}: {r.text[:500]}")
     text = r.text.strip()
@@ -58,7 +88,7 @@ def _delete(path: str) -> dict:
 
 # ── Companies ────────────────────────────────────────────────────────────────
 
-@mcp.tool()
+@_tool()
 def list_companies(limit: int = 50, offset: int = 0, search: str = "") -> dict:
     """List or search Planhat companies."""
     params = {"limit": limit, "offset": offset}
@@ -67,13 +97,13 @@ def list_companies(limit: int = 50, offset: int = 0, search: str = "") -> dict:
     return _get("/companies", params)
 
 
-@mcp.tool()
+@_tool()
 def get_company(company_id: str) -> dict:
     """Get a Planhat company by ID."""
-    return _get(f"/companies/{company_id}")
+    return _get(f"/companies/{_path_id(company_id)}")
 
 
-@mcp.tool()
+@_tool("write")
 def create_company(name: str, external_id: str = "", owner_id: str = "", **kwargs) -> dict:
     """Create a new company in Planhat."""
     body: dict = {"name": name}
@@ -85,7 +115,7 @@ def create_company(name: str, external_id: str = "", owner_id: str = "", **kwarg
     return _post("/companies", body)
 
 
-@mcp.tool()
+@_tool("write")
 def update_company(company_id: str, name: str = "", external_id: str = "", owner_id: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat company. Pass any other Planhat company field as a keyword argument."""
     body: dict = {}
@@ -96,18 +126,18 @@ def update_company(company_id: str, name: str = "", external_id: str = "", owner
     if owner_id:
         body["ownerId"] = owner_id
     body.update(kwargs)
-    return _put(f"/companies/{company_id}", body)
+    return _put(f"/companies/{_path_id(company_id)}", body)
 
 
-@mcp.tool()
+@_tool("delete")
 def delete_company(company_id: str) -> dict:
     """Delete a Planhat company."""
-    return _delete(f"/companies/{company_id}")
+    return _delete(f"/companies/{_path_id(company_id)}")
 
 
 # ── Contacts ─────────────────────────────────────────────────────────────────
 
-@mcp.tool()
+@_tool()
 def list_contacts(limit: int = 50, offset: int = 0, company_id: str = "") -> dict:
     """List Planhat contacts, optionally filtered by company."""
     params: dict = {"limit": limit, "offset": offset}
@@ -116,13 +146,13 @@ def list_contacts(limit: int = 50, offset: int = 0, company_id: str = "") -> dic
     return _get("/endusers", params)
 
 
-@mcp.tool()
+@_tool()
 def get_contact(contact_id: str) -> dict:
     """Get a Planhat contact (end-user) by ID."""
-    return _get(f"/endusers/{contact_id}")
+    return _get(f"/endusers/{_path_id(contact_id)}")
 
 
-@mcp.tool()
+@_tool("write")
 def create_contact(
     first_name: str,
     last_name: str,
@@ -142,7 +172,7 @@ def create_contact(
     return _post("/endusers", body)
 
 
-@mcp.tool()
+@_tool("write")
 def update_contact(
     contact_id: str,
     first_name: str = "",
@@ -159,18 +189,18 @@ def update_contact(
     if email:
         body["email"] = email
     body.update(kwargs)
-    return _put(f"/endusers/{contact_id}", body)
+    return _put(f"/endusers/{_path_id(contact_id)}", body)
 
 
-@mcp.tool()
+@_tool("delete")
 def delete_contact(contact_id: str) -> dict:
     """Delete a Planhat contact (end-user)."""
-    return _delete(f"/endusers/{contact_id}")
+    return _delete(f"/endusers/{_path_id(contact_id)}")
 
 
 # ── Opportunities ─────────────────────────────────────────────────────────────
 
-@mcp.tool()
+@_tool()
 def list_opportunities(limit: int = 50, offset: int = 0, company_id: str = "") -> dict:
     """List Planhat opportunities."""
     params: dict = {"limit": limit, "offset": offset}
@@ -179,13 +209,13 @@ def list_opportunities(limit: int = 50, offset: int = 0, company_id: str = "") -
     return _get("/opportunities", params)
 
 
-@mcp.tool()
+@_tool()
 def get_opportunity(opportunity_id: str) -> dict:
     """Get a Planhat opportunity by ID."""
-    return _get(f"/opportunities/{opportunity_id}")
+    return _get(f"/opportunities/{_path_id(opportunity_id)}")
 
 
-@mcp.tool()
+@_tool("write")
 def create_opportunity(
     title: str,
     company_id: str,
@@ -202,7 +232,7 @@ def create_opportunity(
     return _post("/opportunities", body)
 
 
-@mcp.tool()
+@_tool("write")
 def update_opportunity(
     opportunity_id: str,
     title: str = "",
@@ -219,13 +249,13 @@ def update_opportunity(
     if close_date:
         body["closeDate"] = close_date
     body.update(kwargs)
-    return _put(f"/opportunities/{opportunity_id}", body)
+    return _put(f"/opportunities/{_path_id(opportunity_id)}", body)
 
 
-@mcp.tool()
+@_tool("delete")
 def delete_opportunity(opportunity_id: str) -> dict:
     """Delete a Planhat opportunity."""
-    return _delete(f"/opportunities/{opportunity_id}")
+    return _delete(f"/opportunities/{_path_id(opportunity_id)}")
 
 
 # ── Notes (Conversations of type "note") ───────────────────────────────────────
@@ -233,7 +263,7 @@ def delete_opportunity(opportunity_id: str) -> dict:
 # by type. These tools keep the familiar "note" naming while calling the real
 # underlying resource.
 
-@mcp.tool()
+@_tool()
 def list_notes(limit: int = 50, offset: int = 0, company_id: str = "") -> dict:
     """List Planhat notes."""
     params: dict = {"limit": limit, "offset": offset, "type": "note"}
@@ -242,13 +272,13 @@ def list_notes(limit: int = 50, offset: int = 0, company_id: str = "") -> dict:
     return _get("/conversations", params)
 
 
-@mcp.tool()
+@_tool()
 def get_note(note_id: str) -> dict:
     """Get a Planhat note by ID."""
-    return _get(f"/conversations/{note_id}")
+    return _get(f"/conversations/{_path_id(note_id)}")
 
 
-@mcp.tool()
+@_tool("write")
 def create_note(
     text: str,
     company_id: str,
@@ -264,25 +294,25 @@ def create_note(
     return _post("/conversations", body)
 
 
-@mcp.tool()
+@_tool("write")
 def update_note(note_id: str, text: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat note."""
     body: dict = {}
     if text:
         body["description"] = text
     body.update(kwargs)
-    return _put(f"/conversations/{note_id}", body)
+    return _put(f"/conversations/{_path_id(note_id)}", body)
 
 
-@mcp.tool()
+@_tool("delete")
 def delete_note(note_id: str) -> dict:
     """Delete a Planhat note."""
-    return _delete(f"/conversations/{note_id}")
+    return _delete(f"/conversations/{_path_id(note_id)}")
 
 
 # ── Conversations (all types: email, chat, call, note, ticket, etc.) ───────────
 
-@mcp.tool()
+@_tool()
 def list_conversations(limit: int = 50, offset: int = 0, company_id: str = "", type: str = "") -> dict:
     """List Planhat conversations of any type, optionally filtered by type (e.g. 'email', 'note', 'ticket')."""
     params: dict = {"limit": limit, "offset": offset}
@@ -293,13 +323,13 @@ def list_conversations(limit: int = 50, offset: int = 0, company_id: str = "", t
     return _get("/conversations", params)
 
 
-@mcp.tool()
+@_tool()
 def get_conversation(conversation_id: str) -> dict:
     """Get a Planhat conversation by ID."""
-    return _get(f"/conversations/{conversation_id}")
+    return _get(f"/conversations/{_path_id(conversation_id)}")
 
 
-@mcp.tool()
+@_tool("write")
 def create_conversation(
     company_id: str,
     type: str = "",
@@ -322,7 +352,7 @@ def create_conversation(
     return _post("/conversations", body)
 
 
-@mcp.tool()
+@_tool("write")
 def update_conversation(conversation_id: str, subject: str = "", description: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat conversation."""
     body: dict = {}
@@ -331,30 +361,30 @@ def update_conversation(conversation_id: str, subject: str = "", description: st
     if description:
         body["description"] = description
     body.update(kwargs)
-    return _put(f"/conversations/{conversation_id}", body)
+    return _put(f"/conversations/{_path_id(conversation_id)}", body)
 
 
-@mcp.tool()
+@_tool("delete")
 def delete_conversation(conversation_id: str) -> dict:
     """Delete a Planhat conversation."""
-    return _delete(f"/conversations/{conversation_id}")
+    return _delete(f"/conversations/{_path_id(conversation_id)}")
 
 
 # ── Users ─────────────────────────────────────────────────────────────────────
 
-@mcp.tool()
+@_tool()
 def list_users(limit: int = 50, offset: int = 0) -> dict:
     """List Planhat users (team members)."""
     return _get("/users", {"limit": limit, "offset": offset})
 
 
-@mcp.tool()
+@_tool()
 def get_user(user_id: str) -> dict:
     """Get a Planhat user by ID."""
-    return _get(f"/users/{user_id}")
+    return _get(f"/users/{_path_id(user_id)}")
 
 
-@mcp.tool()
+@_tool("write")
 def create_user(
     first_name: str,
     last_name: str,
@@ -368,7 +398,7 @@ def create_user(
     return _post("/users", body)
 
 
-@mcp.tool()
+@_tool("write")
 def update_user(user_id: str, first_name: str = "", last_name: str = "", email: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat user (team member)."""
     body: dict = {}
@@ -379,18 +409,18 @@ def update_user(user_id: str, first_name: str = "", last_name: str = "", email: 
     if email:
         body["email"] = email
     body.update(kwargs)
-    return _put(f"/users/{user_id}", body)
+    return _put(f"/users/{_path_id(user_id)}", body)
 
 
-@mcp.tool()
+@_tool("delete")
 def delete_user(user_id: str) -> dict:
     """Delete a Planhat user (team member)."""
-    return _delete(f"/users/{user_id}")
+    return _delete(f"/users/{_path_id(user_id)}")
 
 
 # ── Assets ───────────────────────────────────────────────────────────────────
 
-@mcp.tool()
+@_tool()
 def list_assets(limit: int = 50, offset: int = 0, company_id: str = "") -> dict:
     """List Planhat assets."""
     params: dict = {"limit": limit, "offset": offset}
@@ -399,13 +429,13 @@ def list_assets(limit: int = 50, offset: int = 0, company_id: str = "") -> dict:
     return _get("/assets", params)
 
 
-@mcp.tool()
+@_tool()
 def get_asset(asset_id: str) -> dict:
     """Get a Planhat asset by ID."""
-    return _get(f"/assets/{asset_id}")
+    return _get(f"/assets/{_path_id(asset_id)}")
 
 
-@mcp.tool()
+@_tool("write")
 def create_asset(name: str, company_id: str, external_id: str = "", **kwargs) -> dict:
     """Create a new asset in Planhat."""
     body: dict = {"name": name, "companyId": company_id}
@@ -415,25 +445,25 @@ def create_asset(name: str, company_id: str, external_id: str = "", **kwargs) ->
     return _post("/assets", body)
 
 
-@mcp.tool()
+@_tool("write")
 def update_asset(asset_id: str, name: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat asset."""
     body: dict = {}
     if name:
         body["name"] = name
     body.update(kwargs)
-    return _put(f"/assets/{asset_id}", body)
+    return _put(f"/assets/{_path_id(asset_id)}", body)
 
 
-@mcp.tool()
+@_tool("delete")
 def delete_asset(asset_id: str) -> dict:
     """Delete a Planhat asset."""
-    return _delete(f"/assets/{asset_id}")
+    return _delete(f"/assets/{_path_id(asset_id)}")
 
 
 # ── Issues ───────────────────────────────────────────────────────────────────
 
-@mcp.tool()
+@_tool()
 def list_issues(limit: int = 50, offset: int = 0, company_id: str = "") -> dict:
     """List Planhat issues (bugs / feature requests)."""
     params: dict = {"limit": limit, "offset": offset}
@@ -442,13 +472,13 @@ def list_issues(limit: int = 50, offset: int = 0, company_id: str = "") -> dict:
     return _get("/issues", params)
 
 
-@mcp.tool()
+@_tool()
 def get_issue(issue_id: str) -> dict:
     """Get a Planhat issue by ID."""
-    return _get(f"/issues/{issue_id}")
+    return _get(f"/issues/{_path_id(issue_id)}")
 
 
-@mcp.tool()
+@_tool("write")
 def create_issue(title: str, company_id: str = "", **kwargs) -> dict:
     """Create a new issue in Planhat."""
     body: dict = {"title": title}
@@ -458,20 +488,20 @@ def create_issue(title: str, company_id: str = "", **kwargs) -> dict:
     return _post("/issues", body)
 
 
-@mcp.tool()
+@_tool("write")
 def update_issue(issue_id: str, title: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat issue."""
     body: dict = {}
     if title:
         body["title"] = title
     body.update(kwargs)
-    return _put(f"/issues/{issue_id}", body)
+    return _put(f"/issues/{_path_id(issue_id)}", body)
 
 
-@mcp.tool()
+@_tool("delete")
 def delete_issue(issue_id: str) -> dict:
     """Delete a Planhat issue."""
-    return _delete(f"/issues/{issue_id}")
+    return _delete(f"/issues/{_path_id(issue_id)}")
 
 
 # ── Tickets ──────────────────────────────────────────────────────────────────
@@ -479,7 +509,7 @@ def delete_issue(issue_id: str) -> dict:
 # Notes). The dedicated /tickets endpoint only documents list/delete/bulk-upsert,
 # so single create/update go through /conversations like Notes do.
 
-@mcp.tool()
+@_tool()
 def list_tickets(limit: int = 50, offset: int = 0, company_id: str = "", status: str = "", search: str = "") -> dict:
     """List Planhat tickets, optionally filtered by company, status, or a search term."""
     params: dict = {"limit": limit, "offset": offset}
@@ -492,13 +522,13 @@ def list_tickets(limit: int = 50, offset: int = 0, company_id: str = "", status:
     return _get("/tickets", params)
 
 
-@mcp.tool()
+@_tool()
 def get_ticket(ticket_id: str) -> dict:
     """Get a Planhat ticket by ID."""
-    return _get(f"/tickets/{ticket_id}")
+    return _get(f"/tickets/{_path_id(ticket_id)}")
 
 
-@mcp.tool()
+@_tool("write")
 def create_ticket(
     company_id: str,
     subject: str = "",
@@ -518,7 +548,7 @@ def create_ticket(
     return _post("/conversations", body)
 
 
-@mcp.tool()
+@_tool("write")
 def update_ticket(ticket_id: str, status: str = "", subject: str = "", description: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat ticket."""
     body: dict = {}
@@ -529,18 +559,18 @@ def update_ticket(ticket_id: str, status: str = "", subject: str = "", descripti
     if description:
         body["description"] = description
     body.update(kwargs)
-    return _put(f"/conversations/{ticket_id}", body)
+    return _put(f"/conversations/{_path_id(ticket_id)}", body)
 
 
-@mcp.tool()
+@_tool("delete")
 def delete_ticket(ticket_id: str) -> dict:
     """Delete a Planhat ticket."""
-    return _delete(f"/tickets/{ticket_id}")
+    return _delete(f"/tickets/{_path_id(ticket_id)}")
 
 
 # ── Tasks ────────────────────────────────────────────────────────────────────
 
-@mcp.tool()
+@_tool()
 def list_tasks(limit: int = 50, offset: int = 0, company_id: str = "", is_archived: bool | None = None) -> dict:
     """List Planhat tasks."""
     params: dict = {"limit": limit, "offset": offset}
@@ -551,13 +581,13 @@ def list_tasks(limit: int = 50, offset: int = 0, company_id: str = "", is_archiv
     return _get("/tasks", params)
 
 
-@mcp.tool()
+@_tool()
 def get_task(task_id: str) -> dict:
     """Get a Planhat task by ID."""
-    return _get(f"/tasks/{task_id}")
+    return _get(f"/tasks/{_path_id(task_id)}")
 
 
-@mcp.tool()
+@_tool("write")
 def create_task(
     company_id: str,
     action: str = "",
@@ -578,7 +608,7 @@ def create_task(
     return _post("/tasks", body)
 
 
-@mcp.tool()
+@_tool("write")
 def update_task(task_id: str, action: str = "", status: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat task."""
     body: dict = {}
@@ -587,18 +617,18 @@ def update_task(task_id: str, action: str = "", status: str = "", **kwargs) -> d
     if status:
         body["status"] = status
     body.update(kwargs)
-    return _put(f"/tasks/{task_id}", body)
+    return _put(f"/tasks/{_path_id(task_id)}", body)
 
 
-@mcp.tool()
+@_tool("delete")
 def delete_task(task_id: str) -> dict:
     """Delete a Planhat task."""
-    return _delete(f"/tasks/{task_id}")
+    return _delete(f"/tasks/{_path_id(task_id)}")
 
 
 # ── Licenses ─────────────────────────────────────────────────────────────────
 
-@mcp.tool()
+@_tool()
 def list_licenses(limit: int = 50, offset: int = 0, company_id: str = "") -> dict:
     """List Planhat licenses (recurring revenue records)."""
     params: dict = {"limit": limit, "offset": offset}
@@ -607,13 +637,13 @@ def list_licenses(limit: int = 50, offset: int = 0, company_id: str = "") -> dic
     return _get("/licenses", params)
 
 
-@mcp.tool()
+@_tool()
 def get_license(license_id: str) -> dict:
     """Get a Planhat license by ID."""
-    return _get(f"/licenses/{license_id}")
+    return _get(f"/licenses/{_path_id(license_id)}")
 
 
-@mcp.tool()
+@_tool("write")
 def create_license(company_id: str, currency: str, value: float, **kwargs) -> dict:
     """Create a new license in Planhat."""
     body: dict = {"companyId": company_id, "_currency": currency, "value": value}
@@ -621,25 +651,25 @@ def create_license(company_id: str, currency: str, value: float, **kwargs) -> di
     return _post("/licenses", body)
 
 
-@mcp.tool()
+@_tool("write")
 def update_license(license_id: str, value: float | None = None, **kwargs) -> dict:
     """Update fields on an existing Planhat license."""
     body: dict = {}
     if value is not None:
         body["value"] = value
     body.update(kwargs)
-    return _put(f"/licenses/{license_id}", body)
+    return _put(f"/licenses/{_path_id(license_id)}", body)
 
 
-@mcp.tool()
+@_tool("delete")
 def delete_license(license_id: str) -> dict:
     """Delete a Planhat license."""
-    return _delete(f"/licenses/{license_id}")
+    return _delete(f"/licenses/{_path_id(license_id)}")
 
 
 # ── Invoices ─────────────────────────────────────────────────────────────────
 
-@mcp.tool()
+@_tool()
 def list_invoices(limit: int = 50, offset: int = 0, company_id: str = "") -> dict:
     """List Planhat invoices."""
     params: dict = {"limit": limit, "offset": offset}
@@ -648,13 +678,13 @@ def list_invoices(limit: int = 50, offset: int = 0, company_id: str = "") -> dic
     return _get("/invoices", params)
 
 
-@mcp.tool()
+@_tool()
 def get_invoice(invoice_id: str) -> dict:
     """Get a Planhat invoice by ID."""
-    return _get(f"/invoices/{invoice_id}")
+    return _get(f"/invoices/{_path_id(invoice_id)}")
 
 
-@mcp.tool()
+@_tool("write")
 def create_invoice(company_id: str, currency: str, invoice_date: str, **kwargs) -> dict:
     """Create a new invoice in Planhat."""
     body: dict = {"cId": company_id, "currency": currency, "invoiceDate": invoice_date}
@@ -662,16 +692,16 @@ def create_invoice(company_id: str, currency: str, invoice_date: str, **kwargs) 
     return _post("/invoices", body)
 
 
-@mcp.tool()
+@_tool("write")
 def update_invoice(invoice_id: str, **kwargs) -> dict:
     """Update fields on an existing Planhat invoice."""
-    return _put(f"/invoices/{invoice_id}", kwargs)
+    return _put(f"/invoices/{_path_id(invoice_id)}", kwargs)
 
 
-@mcp.tool()
+@_tool("delete")
 def delete_invoice(invoice_id: str) -> dict:
     """Delete a Planhat invoice."""
-    return _delete(f"/invoices/{invoice_id}")
+    return _delete(f"/invoices/{_path_id(invoice_id)}")
 
 
 if __name__ == "__main__":
