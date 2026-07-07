@@ -102,6 +102,27 @@ These are the traps that produced real bugs in this codebase's history:
   add the five tools, add the five cases to `CASES` in `tests/test_tools.py`,
   update the tool-count in README/CHANGELOG, and note any field quirks above.
 
+## The .mcpb bundle (one-click install)
+
+- `manifest.json` defines the bundle: `server.type: "uv"`, the token as a
+  `sensitive` user_config field (keychain-stored), and the two gates as
+  boolean checkboxes. `tests/test_bundle.py` enforces that the manifest
+  version matches `pyproject.toml` and that the env mapping matches what
+  `planhat_mcp.py` actually reads — keep all three in sync when changing any.
+- The bundle may contain **exactly six files** (planhat_mcp.py, pyproject.toml,
+  uv.lock, manifest.json, LICENSE, README.md). The allowlist is enforced in
+  both `ci.yml` and `release.yml` (duplicated — update both) with `.mcpbignore`
+  keeping everything else out. Never weaken this: a bundle on the public
+  release page containing `.env` would leak a live token.
+- `compatibility.runtimes.python` is deliberately absent from the manifest:
+  Claude Desktop's system-Python probe (mcpb issue #84) can wrongly block
+  uv-managed bundles. Don't add it back.
+- Releases: bump the version in `pyproject.toml` **and** `manifest.json`,
+  update CHANGELOG, tag `vX.Y.Z` — the release workflow refuses to publish
+  on any version mismatch and attaches `planhat-mcp.mcpb` to the release.
+- Local build: `npx -y @anthropic-ai/mcpb@2.1.2 pack . planhat.mcpb`
+  (output name is gitignored and mcpbignored).
+
 ## Layout
 
 ```

@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "planhat-mcp",
   "display_name": "Planhat MCP",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Talk to your Planhat customer data in plain English — 60 tools across 12 CRM resource types.",
   "long_description": "Connects Planhat, the customer success platform, to Claude. List, inspect, create, update and delete companies, contacts, opportunities, notes, conversations, users, assets, issues, tickets, tasks, licenses and invoices — directly from the conversation. Runs entirely on your machine and talks only to api.planhat.com with your own API token.",
   "author": {

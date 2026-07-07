@@ -21,24 +21,31 @@ It runs entirely on your own computer, with your own Planhat API token — no th
 
 ---
 
-## Quickstart
+## Install in Claude Desktop
 
-You need three things: this folder, a Planhat API token, and Claude Desktop. Ten minutes, no programming.
+The whole install: download one file, double-click it, paste your token into a dialog. No terminal, no config files, no code. Two minutes.
 
-### 1. Download this project and the `uv` tool
+1. **Get `uv`** (one-time — skip if you already have it): `brew install uv` on macOS, or see [the uv install guide](https://docs.astral.sh/uv/getting-started/installation/) for Windows. Claude Desktop uses it to run this server in its own isolated environment.
+2. **[⬇ Download planhat-mcp.mcpb](https://github.com/da-troll/planhat-mcp/releases/latest/download/planhat-mcp.mcpb)** — always the latest release.
+3. **Double-click the downloaded file.** Claude Desktop opens an install dialog — review it and click **Install**.
+4. **Paste your Planhat API token** into the token field. It's stored in your system keychain, never in a file on disk. (An admin can create a token in Planhat under **Settings → Service Accounts (Private Apps) → API Access Token**.) Optionally tick **Read-only mode** or **Disable delete tools** to cap what the AI can ever do.
 
-Open the **Terminal** app and paste these two lines:
+Then ask Claude: *"List my top 3 Planhat companies."* If you get an answer, you're done. 🎉
+
+> **Switching from a manual install?** Remove the old `planhat` entry from `claude_desktop_config.json` first, or you'll see two copies of every tool.
+
+## Manual install (Cursor and other MCP clients)
+
+For MCP clients other than Claude Desktop — or if you prefer running from a checkout:
+
+**1. Get the code and `uv`:**
 
 ```bash
 git clone https://github.com/da-troll/planhat-mcp.git ~/planhat-mcp
 brew install uv
 ```
 
-(On Windows, install [Git](https://git-scm.com/download/win) and [uv](https://docs.astral.sh/uv/getting-started/installation/), then run the `git clone` line in PowerShell.)
-
-### 2. Add your Planhat token
-
-In Planhat, an admin can create an API token under **Settings → Service Accounts (Private Apps) → API Access Token**. Then:
+**2. Add your Planhat token:**
 
 ```bash
 cd ~/planhat-mcp
@@ -48,14 +55,7 @@ open .env        # paste your token after PLANHAT_TOKEN= and save
 
 The token stays in that one file on your machine. Treat it like a password.
 
-### 3. Point Claude Desktop at it
-
-Open Claude Desktop's config file:
-
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-Add this (or merge it into your existing `mcpServers` block), replacing `YOUR-USERNAME`:
+**3. Register the server** in your client's MCP config (for Claude Desktop that's `claude_desktop_config.json`; for Cursor, `.cursor/mcp.json`), replacing `YOUR-USERNAME`:
 
 ```json
 {
@@ -73,7 +73,7 @@ Add this (or merge it into your existing `mcpServers` block), replacing `YOUR-US
 }
 ```
 
-Restart Claude Desktop, then ask it: *"List my top 3 Planhat companies."* If you get an answer, you're done. 🎉
+Restart the client and test with the same question as above.
 
 ---
 
@@ -100,7 +100,7 @@ Claude only ever does what you ask, and the token you create controls what it *c
 
 ### Optional hardening
 
-Two switches cap what any connected AI can ever do, no matter what it's asked. Add either to your `.env` file:
+Two switches cap what any connected AI can ever do, no matter what it's asked. Bundle installs get them as checkboxes in the install dialog; manual installs add either to the `.env` file:
 
 | Setting | Effect |
 |---|---|
@@ -115,8 +115,11 @@ Every tool also carries the standard MCP annotations (`readOnlyHint`, `destructi
 planhat-mcp/
 ├── README.md                  ← you are here
 ├── planhat_mcp.py             ← the entire MCP server (one file)
+├── manifest.json              ← .mcpb bundle definition (one-click install)
 ├── pyproject.toml             ← dependencies & tooling config
-├── .env.example               ← template for your API token
+├── uv.lock                    ← pinned dependency versions
+├── .env.example               ← token template for manual installs
+├── .mcpbignore                ← what stays out of the bundle
 ├── AGENTS.md                  ← handbook for AI coding agents
 ├── CLAUDE.md → AGENTS.md      ← same file, Claude's preferred name
 ├── LICENSE                    ← MIT
@@ -124,27 +127,32 @@ planhat-mcp/
 ├── SECURITY.md                ← token handling & reporting issues
 ├── CONTRIBUTING.md            ← how to add tools or fix bugs
 ├── tests/
-│   └── test_tools.py          ← offline tests for all 60 tools
+│   ├── test_tools.py          ← offline tests for all 60 tools
+│   ├── test_bundle.py         ← manifest/bundle consistency checks
+│   └── conftest.py            ← keeps real tokens out of test runs
 └── .github/workflows/
-    ├── ci.yml                 ← lint + tests on every push
-    └── release.yml            ← GitHub release on version tags
+    ├── ci.yml                 ← lint + tests + bundle gate on every push
+    └── release.yml            ← GitHub release with .mcpb asset on version tags
 ```
 
 ## Troubleshooting
 
 | Symptom | Likely cause & fix |
 |---|---|
+| Install dialog calls the extension "incompatible" or greys out Install | Claude Desktop probes for a system Python even though `uv` manages its own ([upstream issue](https://github.com/modelcontextprotocol/mcpb/issues/84)). Make sure `uv` is installed and `python3 --version` prints a version, then retry. |
+| Every Planhat tool appears twice | The bundle and an old manual config entry are both installed — remove `mcpServers.planhat` from `claude_desktop_config.json`. |
 | Claude says it has no Planhat tools | Claude Desktop only reads its config on launch — quit it fully and reopen. Check the JSON has no trailing commas. |
 | `HTTP 401 Unauthorized` in a tool result | The token in `.env` is wrong, expired, or was rotated. Paste a fresh one. |
-| `KeyError: 'PLANHAT_TOKEN'` | There's no `.env` next to `planhat_mcp.py`. Do step 2 again. |
+| `KeyError: 'PLANHAT_TOKEN'` | Bundle installs: re-open the extension's settings and fill in the token. Manual installs: there's no `.env` next to `planhat_mcp.py` — do manual step 2 again. |
 | `command not found: uvx` | `uv` isn't installed or isn't on Claude's PATH — use the full path to `uvx` (find it with `which uvx`) in the config's `command` field. |
 | Tool works but returns `[]` | Usually not an error — that Planhat resource is genuinely empty for your filters. |
 
 ## For engineers
 
 ```bash
-uv run pytest -q       # run the offline test suite (never touches the live API)
-uv run ruff check .    # lint
+uv run pytest -q                                      # offline test suite (never touches the live API)
+uv run ruff check .                                   # lint
+npx -y @anthropic-ai/mcpb@2.1.2 pack . planhat.mcpb   # build the one-click bundle locally
 ```
 
 Architecture notes, API quirks, and contribution rules live in [AGENTS.md](AGENTS.md) and [CONTRIBUTING.md](CONTRIBUTING.md). Endpoint paths were verified against the live Planhat API in July 2026 — notably, Planhat has **no** `/notes` or `/activities` REST endpoints; notes and tickets are `/conversations` under the hood (see AGENTS.md for the full story).

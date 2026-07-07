@@ -3,8 +3,11 @@
 ## Token handling
 
 - Your `PLANHAT_TOKEN` grants real read/write access to your Planhat tenant.
-  It lives only in the local `.env` file, which is gitignored and never leaves
-  your machine. The server sends it only to `https://api.planhat.com` over TLS.
+  With the one-click bundle install it is stored in your **operating system
+  keychain** by Claude Desktop and injected into the server at launch — it
+  never touches a file on disk. Manual installs keep it in a local `.env`
+  file, which is gitignored and never leaves your machine. Either way the
+  server sends it only to `https://api.planhat.com` over TLS.
 - Prefer a **dedicated service-account token with the narrowest permissions**
   you need. A read-only token makes every mutating tool fail safely.
 - Two server-side gates add defense in depth on top of token permissions:
