@@ -9,15 +9,15 @@
 
 **Talk to your Planhat customer data in plain English.**
 
-This is a small connector (an "MCP server") that plugs [Planhat](https://www.planhat.com) — the customer success platform — into Claude Desktop or any other AI app that speaks the [Model Context Protocol](https://modelcontextprotocol.io). Once installed, you can simply ask things like:
+Planhat MCP is a [Model Context Protocol](https://modelcontextprotocol.io) server for [Planhat](https://www.planhat.com), the customer success platform. Add it to Claude Desktop — or any other MCP client — and ask for what you need:
 
 > *"Which companies have licenses renewing this quarter?"*
 > *"Create a task for me to follow up with Acme Corp next week."*
 > *"Summarize the open tickets for our top five accounts."*
 
-…and Claude reads or updates Planhat for you. No dashboards, no exports, no SQL.
+Claude reads and updates Planhat directly, live from the conversation. No dashboards, no exports, no SQL.
 
-It runs entirely **on your own computer** with **your own Planhat API token** — no third-party service sits between your AI and your customer data.
+It runs entirely on your own computer, with your own Planhat API token — no third-party service between your AI and your customer data.
 
 > ⚠️ **Unofficial**: this project is not affiliated with or endorsed by Planhat.
 
