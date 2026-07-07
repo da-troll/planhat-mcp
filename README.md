@@ -19,8 +19,6 @@ Claude reads and updates Planhat directly, live from the conversation. No dashbo
 
 It runs entirely on your own computer, with your own Planhat API token — no third-party service between your AI and your customer data.
 
-> ⚠️ **Unofficial**: this project is not affiliated with or endorsed by Planhat.
-
 ---
 
 ## Quickstart
