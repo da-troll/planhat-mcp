@@ -15,11 +15,32 @@ jobs:
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           python-version: "3.12"
+      - name: Verify tag matches pyproject and manifest versions
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PYPROJECT=$(grep -m1 '^version = ' pyproject.toml | cut -d'"' -f2)
+          MANIFEST=$(jq -r .version manifest.json)
+          if [ "$TAG" != "$PYPROJECT" ] || [ "$TAG" != "$MANIFEST" ]; then
+            echo "::error::Version mismatch: tag=$TAG pyproject=$PYPROJECT manifest=$MANIFEST"
+            exit 1
+          fi
       - name: Verify before releasing
         run: |
           uv run ruff check .
           uv run pytest -q
+      - name: Pack MCPB bundle and verify contents against allowlist
+        run: |
+          npx -y @anthropic-ai/mcpb@2.1.2 validate manifest.json
+          npx -y @anthropic-ai/mcpb@2.1.2 pack . planhat-mcp.mcpb
+          actual=$(unzip -Z1 planhat-mcp.mcpb | sort)
+          expected=$(printf 'LICENSE\nREADME.md\nmanifest.json\nplanhat_mcp.py\npyproject.toml\nuv.lock\n' | sort)
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Bundle contents drifted from the allowlist"
+            diff <(echo "$expected") <(echo "$actual") || true
+            exit 1
+          fi
       - name: Publish GitHub release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           generate_release_notes: true
+          files: planhat-mcp.mcpb

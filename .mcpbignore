@@ -22,3 +22,4 @@ CONTRIBUTING.md
 SECURITY.md
 .DS_Store
 *.pyc
+*.mcpb

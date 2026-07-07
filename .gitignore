@@ -9,5 +9,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
+# Built bundles — produced by CI/release, never committed
+*.mcpb
+
 # macOS
 .DS_Store
