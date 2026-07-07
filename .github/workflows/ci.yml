@@ -10,23 +10,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          python-version: "3.12"
-      - name: Lint
-        run: uv run ruff check .
+          node-version: "22"
+      - name: Install
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
       - name: Test
-        run: uv run pytest -q
+        run: npm test
+      - name: Build bundle
+        run: npm run build
       - name: Validate MCPB manifest
         run: npx -y @anthropic-ai/mcpb@2.1.2 validate manifest.json
       - name: Pack bundle and verify contents against allowlist
         run: |
           npx -y @anthropic-ai/mcpb@2.1.2 pack . planhat-mcp.mcpb
           actual=$(unzip -Z1 planhat-mcp.mcpb | sort)
-          expected=$(printf 'LICENSE\nREADME.md\nmanifest.json\nplanhat_mcp.py\npyproject.toml\nuv.lock\n' | sort)
+          expected=$(printf 'LICENSE\nREADME.md\ndist/server.js\nmanifest.json\n' | sort)
           if [ "$actual" != "$expected" ]; then
             echo "::error::Bundle contents drifted from the allowlist"
             diff <(echo "$expected") <(echo "$actual") || true
             exit 1
           fi
-          echo "Bundle contains exactly the 6 allowlisted files"
+          echo "Bundle contains exactly the 4 allowlisted files"

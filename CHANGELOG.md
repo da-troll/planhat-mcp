@@ -3,6 +3,27 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/).
 
+## [2.0.0] - 2026-07-07
+
+Rewritten in TypeScript so the one-click install needs no prerequisites at all.
+
+### Changed
+- Server ported from Python to TypeScript on the official
+  `@modelcontextprotocol/sdk`. The bundle is now `server.type: "node"`, which
+  Claude Desktop runs with its built-in Node runtime. The old uv/Python bundle
+  required users to install `uv` first; now there is nothing to install.
+- Same 60 tools, names, environment variables, annotations and gates as 1.x.
+- The manual-install path uses Node.js 18+ (`git clone`, `npm install`,
+  `npm run build`) instead of uv.
+
+### Added
+- Zod input schemas validate tool arguments before any request is made.
+- `extra_fields`: an explicit, schema-visible object for passing arbitrary
+  Planhat fields on create/update (replaces Python's implicit `**kwargs`).
+
+### Removed
+- The Python server, its dependencies and its test suite.
+
 ## [1.3.1] - 2026-07-07
 
 ### Changed

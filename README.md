@@ -3,7 +3,7 @@
 [![CI](https://github.com/da-troll/planhat-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/da-troll/planhat-mcp/actions/workflows/ci.yml)
 [![Release](https://github.com/da-troll/planhat-mcp/actions/workflows/release.yml/badge.svg)](https://github.com/da-troll/planhat-mcp/actions/workflows/release.yml)
 [![Latest release](https://img.shields.io/github/v/release/da-troll/planhat-mcp)](https://github.com/da-troll/planhat-mcp/releases)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
+[![Node 18+](https://img.shields.io/badge/node-18%2B-brightgreen.svg)](package.json)
 [![MCP](https://img.shields.io/badge/MCP-compatible-8A2BE2.svg)](https://modelcontextprotocol.io)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -25,53 +25,48 @@ It runs entirely on your own computer, with your own Planhat API token. No third
 
 ## Install in Claude Desktop
 
-Download one file, double-click it, paste your token. No terminal, no config files, no code.
+Download one file, double-click it, paste your token. No terminal, no config files, no code, and nothing to install first.
 
-1. Install `uv` if you don't have it: `brew install uv` on macOS, or the [uv install guide](https://docs.astral.sh/uv/getting-started/installation/) on Windows.
-2. [Download the .mcpb file](https://github.com/da-troll/planhat-mcp/releases/latest/download/planhat-mcp.mcpb).
-3. Double-click the downloaded file. Claude Desktop opens an install pop-up.
-4. Review the pop-up and click **Install**.
-5. Create a Planhat API token if you don't have one: in Planhat, go to **Settings > Service Accounts (Private Apps) > API Access Token**. Admin access is required.
-6. Paste the token into the token field. It is stored in your system keychain, never in a file on disk.
-7. Optional: tick **Read-only mode** or **Disable delete tools** to limit what the AI can do.
-8. Ask Claude: *"List my top 3 Planhat companies."* An answer means you are done.
+1. [Download the .mcpb file](https://github.com/da-troll/planhat-mcp/releases/latest/download/planhat-mcp.mcpb).
+2. Double-click the downloaded file. Claude Desktop opens an install pop-up.
+3. Review the pop-up and click **Install**.
+4. Create a Planhat API token if you don't have one: in Planhat, go to **Settings > Service Accounts (Private Apps) > API Access Token**. Admin access is required.
+5. Paste the token into the token field. It is stored in your system keychain, never in a file on disk.
+6. Optional: tick **Read-only mode** or **Disable delete tools** to limit what the AI can do.
+7. Ask Claude: *"List my top 3 Planhat companies."* An answer means you are done.
 
 > **Switching from a manual install?** Remove the old `planhat` entry from `claude_desktop_config.json` first, or you'll see two copies of every tool.
 
 ## Manual install (Cursor and other MCP clients)
 
-For MCP clients other than Claude Desktop, or if you prefer running from a checkout:
+For MCP clients other than Claude Desktop, or if you prefer running from a checkout. Requires [Node.js](https://nodejs.org) 18 or newer.
 
-**1. Get the code and `uv`:**
+**1. Get the code and build the server:**
 
 ```bash
 git clone https://github.com/da-troll/planhat-mcp.git ~/planhat-mcp
-brew install uv
+cd ~/planhat-mcp
+npm install
+npm run build
 ```
 
 **2. Add your Planhat token:**
 
 ```bash
-cd ~/planhat-mcp
 cp .env.example .env
 open .env        # paste your token after PLANHAT_TOKEN= and save
 ```
 
 The token stays in that one file on your machine. Treat it like a password.
 
-**3. Register the server** in your client's MCP config (for Claude Desktop that's `claude_desktop_config.json`; for Cursor, `.cursor/mcp.json`), replacing `YOUR-USERNAME`:
+**3. Register the server** in your client's MCP config (Claude Desktop: `claude_desktop_config.json`; Cursor: `.cursor/mcp.json`), replacing `YOUR-USERNAME`:
 
 ```json
 {
   "mcpServers": {
     "planhat": {
-      "command": "uvx",
-      "args": [
-        "--with", "python-dotenv",
-        "--with", "requests",
-        "mcp[cli]", "run",
-        "/Users/YOUR-USERNAME/planhat-mcp/planhat_mcp.py"
-      ]
+      "command": "node",
+      "args": ["/Users/YOUR-USERNAME/planhat-mcp/dist/server.js"]
     }
   }
 }
@@ -116,46 +111,57 @@ Every tool also carries the standard MCP annotations (`readOnlyHint`, `destructi
 ```
 planhat-mcp/
 ├── README.md                  ← you are here
-├── planhat_mcp.py             ← the entire MCP server (one file)
 ├── manifest.json              ← .mcpb bundle definition (one-click install)
-├── pyproject.toml             ← dependencies & tooling config
-├── uv.lock                    ← pinned dependency versions
+├── package.json               ← dependencies, scripts, version
+├── package-lock.json          ← pinned dependency versions
+├── tsconfig.json              ← TypeScript config
 ├── .env.example               ← token template for manual installs
 ├── .mcpbignore                ← what stays out of the bundle
+├── src/
+│   ├── index.ts               ← entry point: load config, serve over stdio
+│   ├── server.ts              ← registers tools, applies gates + annotations
+│   ├── tools.ts               ← all 60 tool definitions
+│   ├── http.ts                ← Planhat REST client
+│   └── env.ts                 ← .env loader for manual installs
+├── tests/
+│   ├── tools.test.ts          ← offline tests for all 60 tools
+│   └── http.test.ts           ← HTTP layer: timeout, errors, delete cases
 ├── AGENTS.md                  ← handbook for AI coding agents
 ├── CLAUDE.md → AGENTS.md      ← same file, Claude's preferred name
 ├── LICENSE                    ← MIT
 ├── CHANGELOG.md               ← release history
 ├── SECURITY.md                ← token handling & reporting issues
 ├── CONTRIBUTING.md            ← how to add tools or fix bugs
-├── tests/
-│   ├── test_tools.py          ← offline tests for all 60 tools
-│   ├── test_bundle.py         ← manifest/bundle consistency checks
-│   └── conftest.py            ← keeps real tokens out of test runs
 └── .github/workflows/
-    ├── ci.yml                 ← lint + tests + bundle gate on every push
+    ├── ci.yml                 ← typecheck + tests + bundle gate on every push
     └── release.yml            ← GitHub release with .mcpb asset on version tags
 ```
+
+The shipped bundle contains just four files: `manifest.json`, `dist/server.js` (one dependency-free build), `LICENSE` and `README.md`.
 
 ## Troubleshooting
 
 | Symptom | Likely cause & fix |
 |---|---|
-| Install pop-up calls the extension "incompatible" or greys out Install | Claude Desktop probes for a system Python even though `uv` manages its own ([upstream issue](https://github.com/modelcontextprotocol/mcpb/issues/84)). Make sure `uv` is installed and `python3 --version` prints a version, then retry. |
+| Double-clicking the .mcpb does nothing, or Install is greyed out | Update to a recent Claude Desktop; older builds predate one-click .mcpb extensions. You can also install from **Settings > Extensions > Advanced > Install Extension**. |
 | Every Planhat tool appears twice | The bundle and an old manual config entry are both installed. Remove `mcpServers.planhat` from `claude_desktop_config.json`. |
 | Claude says it has no Planhat tools | Claude Desktop only reads its config on launch. Quit it fully, reopen, and check the JSON has no trailing commas. |
 | `HTTP 401 Unauthorized` in a tool result | The token is wrong, expired, or was rotated. Paste a fresh one. |
-| `KeyError: 'PLANHAT_TOKEN'` | Bundle installs: re-open the extension's settings and fill in the token. Manual installs: there is no `.env` next to `planhat_mcp.py`, so repeat manual step 2. |
-| `command not found: uvx` | `uv` isn't installed or isn't on Claude's PATH. Use the full path to `uvx` (find it with `which uvx`) in the config's `command` field. |
+| `PLANHAT_TOKEN is not set` | Bundle installs: re-open the extension's settings and fill in the token. Manual installs: there is no `.env` beside the server, so repeat manual step 2. |
+| `command not found: node` (manual install) | Install [Node.js](https://nodejs.org) 18 or newer, or point `command` at the full path to your `node` binary. |
 | Tool works but returns `[]` | Usually not an error: that Planhat resource is genuinely empty for your filters. |
 
 ## For engineers
 
 ```bash
-uv run pytest -q                                      # offline test suite (never touches the live API)
-uv run ruff check .                                   # lint
-npx -y @anthropic-ai/mcpb@2.1.2 pack . planhat.mcpb   # build the one-click bundle locally
+npm install          # install dependencies
+npm test             # offline test suite (never touches the live API)
+npm run typecheck    # TypeScript type checking
+npm run build        # produce dist/server.js
+npm start            # run the built server over stdio
 ```
+
+Build the one-click bundle locally with `npm run build && npx -y @anthropic-ai/mcpb@2.1.2 pack . planhat.mcpb`.
 
 Architecture notes, API quirks, and contribution rules live in [AGENTS.md](AGENTS.md) and [CONTRIBUTING.md](CONTRIBUTING.md). Endpoint paths were verified against the live Planhat API in July 2026. Notably, Planhat has **no** `/notes` or `/activities` REST endpoints; notes and tickets are `/conversations` under the hood (see AGENTS.md for the full story).
 
