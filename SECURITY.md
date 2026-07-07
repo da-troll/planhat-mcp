@@ -12,6 +12,10 @@
   `PLANHAT_DISABLE_DELETE=1` removes the delete tools. Set either in `.env`.
   Ungated writes remain the default because full CRUD is this project's
   purpose — the gates exist for users who want a hard ceiling.
+- All tools carry MCP `ToolAnnotations` (`readOnlyHint`/`destructiveHint`/
+  `idempotentHint`) so permission-aware clients can prompt before destructive
+  calls and auto-approve reads. These are hints — clients enforce their own
+  approval policy; the gates and token permissions are the guarantees.
 - If a token is ever exposed (committed, pasted into a chat, logged), rotate it
   in Planhat immediately — revoke the old token, don't just create a new one.
 

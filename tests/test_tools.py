@@ -266,6 +266,23 @@ def test_default_mode_registers_all_60_tools():
     assert len(planhat_mcp.mcp._tool_manager._tools) == 60
 
 
+# ── Tool annotations (permission hints for MCP clients) ────────────────────────
+
+
+def test_annotations_match_tool_verbs():
+    for name, registered in planhat_mcp.mcp._tool_manager._tools.items():
+        ann = registered.annotations
+        assert ann is not None, f"{name} has no annotations"
+        if name.startswith(("list_", "get_")):
+            assert ann.readOnlyHint is True, name
+        elif name.startswith("create_"):
+            assert ann.readOnlyHint is False and ann.destructiveHint is False, name
+        elif name.startswith(("update_", "delete_")):
+            assert ann.readOnlyHint is False and ann.destructiveHint is True, name
+        else:
+            raise AssertionError(f"unclassified tool: {name}")
+
+
 # ── Error handling ─────────────────────────────────────────────────────────────
 
 

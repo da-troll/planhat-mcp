@@ -3,6 +3,14 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/).
 
+## [1.2.0] — 2026-07-07
+
+### Added
+- MCP `ToolAnnotations` on every tool: `readOnlyHint` on list/get,
+  `destructiveHint` on update/delete (creates marked non-destructive),
+  `idempotentHint` where applicable. Permission-aware MCP clients use these
+  to prompt before destructive calls and auto-approve reads.
+
 ## [1.1.0] — 2026-07-07
 
 Hardening release following an external security review.

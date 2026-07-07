@@ -107,7 +107,7 @@ Two switches cap what any connected AI can ever do, no matter what it's asked. A
 | `PLANHAT_READ_ONLY=1` | Only the list/get tools exist — nothing in Planhat can be changed. |
 | `PLANHAT_DISABLE_DELETE=1` | Everything works except deleting records. |
 
-These stack with the strongest control of all: the permissions on the Planhat token itself (see [SECURITY.md](SECURITY.md)).
+Every tool also carries the standard MCP annotations (`readOnlyHint`, `destructiveHint`), so clients that calibrate their permission prompts per tool — asking before destructive calls, auto-approving reads — get the right signals. Whether and when to prompt is always the client's decision; the switches above and the permissions on the Planhat token itself (see [SECURITY.md](SECURITY.md)) are the hard limits.
 
 ## Repository layout
 

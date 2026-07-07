@@ -4,6 +4,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import requests
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
@@ -22,6 +23,17 @@ DISABLE_DELETE = _flag("PLANHAT_DISABLE_DELETE")
 mcp = FastMCP("planhat-local")
 
 
+# Spec hints that let MCP clients calibrate their permission UX per tool:
+# reads can be auto-approved, deletes deserve a confirmation prompt. Enforcement
+# is the client's job — these are the server's half of that contract.
+_KIND_ANNOTATIONS = {
+    "read": ToolAnnotations(readOnlyHint=True),
+    "create": ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False),
+    "update": ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True),
+    "delete": ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True),
+}
+
+
 def _tool(kind: str = "read"):
     """Register an MCP tool, honoring the PLANHAT_READ_ONLY / PLANHAT_DISABLE_DELETE gates."""
 
@@ -30,7 +42,7 @@ def _tool(kind: str = "read"):
             return fn
         if DISABLE_DELETE and kind == "delete":
             return fn
-        return mcp.tool()(fn)
+        return mcp.tool(annotations=_KIND_ANNOTATIONS[kind])(fn)
 
     return decorate
 
@@ -103,7 +115,7 @@ def get_company(company_id: str) -> dict:
     return _get(f"/companies/{_path_id(company_id)}")
 
 
-@_tool("write")
+@_tool("create")
 def create_company(name: str, external_id: str = "", owner_id: str = "", **kwargs) -> dict:
     """Create a new company in Planhat."""
     body: dict = {"name": name}
@@ -115,7 +127,7 @@ def create_company(name: str, external_id: str = "", owner_id: str = "", **kwarg
     return _post("/companies", body)
 
 
-@_tool("write")
+@_tool("update")
 def update_company(company_id: str, name: str = "", external_id: str = "", owner_id: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat company. Pass any other Planhat company field as a keyword argument."""
     body: dict = {}
@@ -152,7 +164,7 @@ def get_contact(contact_id: str) -> dict:
     return _get(f"/endusers/{_path_id(contact_id)}")
 
 
-@_tool("write")
+@_tool("create")
 def create_contact(
     first_name: str,
     last_name: str,
@@ -172,7 +184,7 @@ def create_contact(
     return _post("/endusers", body)
 
 
-@_tool("write")
+@_tool("update")
 def update_contact(
     contact_id: str,
     first_name: str = "",
@@ -215,7 +227,7 @@ def get_opportunity(opportunity_id: str) -> dict:
     return _get(f"/opportunities/{_path_id(opportunity_id)}")
 
 
-@_tool("write")
+@_tool("create")
 def create_opportunity(
     title: str,
     company_id: str,
@@ -232,7 +244,7 @@ def create_opportunity(
     return _post("/opportunities", body)
 
 
-@_tool("write")
+@_tool("update")
 def update_opportunity(
     opportunity_id: str,
     title: str = "",
@@ -278,7 +290,7 @@ def get_note(note_id: str) -> dict:
     return _get(f"/conversations/{_path_id(note_id)}")
 
 
-@_tool("write")
+@_tool("create")
 def create_note(
     text: str,
     company_id: str,
@@ -294,7 +306,7 @@ def create_note(
     return _post("/conversations", body)
 
 
-@_tool("write")
+@_tool("update")
 def update_note(note_id: str, text: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat note."""
     body: dict = {}
@@ -329,7 +341,7 @@ def get_conversation(conversation_id: str) -> dict:
     return _get(f"/conversations/{_path_id(conversation_id)}")
 
 
-@_tool("write")
+@_tool("create")
 def create_conversation(
     company_id: str,
     type: str = "",
@@ -352,7 +364,7 @@ def create_conversation(
     return _post("/conversations", body)
 
 
-@_tool("write")
+@_tool("update")
 def update_conversation(conversation_id: str, subject: str = "", description: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat conversation."""
     body: dict = {}
@@ -384,7 +396,7 @@ def get_user(user_id: str) -> dict:
     return _get(f"/users/{_path_id(user_id)}")
 
 
-@_tool("write")
+@_tool("create")
 def create_user(
     first_name: str,
     last_name: str,
@@ -398,7 +410,7 @@ def create_user(
     return _post("/users", body)
 
 
-@_tool("write")
+@_tool("update")
 def update_user(user_id: str, first_name: str = "", last_name: str = "", email: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat user (team member)."""
     body: dict = {}
@@ -435,7 +447,7 @@ def get_asset(asset_id: str) -> dict:
     return _get(f"/assets/{_path_id(asset_id)}")
 
 
-@_tool("write")
+@_tool("create")
 def create_asset(name: str, company_id: str, external_id: str = "", **kwargs) -> dict:
     """Create a new asset in Planhat."""
     body: dict = {"name": name, "companyId": company_id}
@@ -445,7 +457,7 @@ def create_asset(name: str, company_id: str, external_id: str = "", **kwargs) ->
     return _post("/assets", body)
 
 
-@_tool("write")
+@_tool("update")
 def update_asset(asset_id: str, name: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat asset."""
     body: dict = {}
@@ -478,7 +490,7 @@ def get_issue(issue_id: str) -> dict:
     return _get(f"/issues/{_path_id(issue_id)}")
 
 
-@_tool("write")
+@_tool("create")
 def create_issue(title: str, company_id: str = "", **kwargs) -> dict:
     """Create a new issue in Planhat."""
     body: dict = {"title": title}
@@ -488,7 +500,7 @@ def create_issue(title: str, company_id: str = "", **kwargs) -> dict:
     return _post("/issues", body)
 
 
-@_tool("write")
+@_tool("update")
 def update_issue(issue_id: str, title: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat issue."""
     body: dict = {}
@@ -528,7 +540,7 @@ def get_ticket(ticket_id: str) -> dict:
     return _get(f"/tickets/{_path_id(ticket_id)}")
 
 
-@_tool("write")
+@_tool("create")
 def create_ticket(
     company_id: str,
     subject: str = "",
@@ -548,7 +560,7 @@ def create_ticket(
     return _post("/conversations", body)
 
 
-@_tool("write")
+@_tool("update")
 def update_ticket(ticket_id: str, status: str = "", subject: str = "", description: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat ticket."""
     body: dict = {}
@@ -587,7 +599,7 @@ def get_task(task_id: str) -> dict:
     return _get(f"/tasks/{_path_id(task_id)}")
 
 
-@_tool("write")
+@_tool("create")
 def create_task(
     company_id: str,
     action: str = "",
@@ -608,7 +620,7 @@ def create_task(
     return _post("/tasks", body)
 
 
-@_tool("write")
+@_tool("update")
 def update_task(task_id: str, action: str = "", status: str = "", **kwargs) -> dict:
     """Update fields on an existing Planhat task."""
     body: dict = {}
@@ -643,7 +655,7 @@ def get_license(license_id: str) -> dict:
     return _get(f"/licenses/{_path_id(license_id)}")
 
 
-@_tool("write")
+@_tool("create")
 def create_license(company_id: str, currency: str, value: float, **kwargs) -> dict:
     """Create a new license in Planhat."""
     body: dict = {"companyId": company_id, "_currency": currency, "value": value}
@@ -651,7 +663,7 @@ def create_license(company_id: str, currency: str, value: float, **kwargs) -> di
     return _post("/licenses", body)
 
 
-@_tool("write")
+@_tool("update")
 def update_license(license_id: str, value: float | None = None, **kwargs) -> dict:
     """Update fields on an existing Planhat license."""
     body: dict = {}
@@ -684,7 +696,7 @@ def get_invoice(invoice_id: str) -> dict:
     return _get(f"/invoices/{_path_id(invoice_id)}")
 
 
-@_tool("write")
+@_tool("create")
 def create_invoice(company_id: str, currency: str, invoice_date: str, **kwargs) -> dict:
     """Create a new invoice in Planhat."""
     body: dict = {"cId": company_id, "currency": currency, "invoiceDate": invoice_date}
@@ -692,7 +704,7 @@ def create_invoice(company_id: str, currency: str, invoice_date: str, **kwargs) 
     return _post("/invoices", body)
 
 
-@_tool("write")
+@_tool("update")
 def update_invoice(invoice_id: str, **kwargs) -> dict:
     """Update fields on an existing Planhat invoice."""
     return _put(f"/invoices/{_path_id(invoice_id)}", kwargs)
