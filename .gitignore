@@ -9,6 +9,10 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
+# Node
+node_modules/
+dist/
+
 # Built bundles: produced by CI/release, never committed
 *.mcpb
 

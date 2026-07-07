@@ -1,0 +1,26 @@
+{
+  "name": "planhat-mcp",
+  "version": "2.0.0",
+  "description": "Local MCP server that connects Planhat CRM to Claude and any MCP client: 60 tools across 12 resource types",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "esbuild": "0.28.1",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}
