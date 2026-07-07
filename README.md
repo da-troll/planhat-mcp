@@ -19,20 +19,17 @@ Here's your answer: a [Model Context Protocol](https://modelcontextprotocol.io) 
 > 
 > *"Summarize the open tickets for our top five accounts."*
 
-
 Claude reads and updates Planhat directly, live from the conversation. No dashboards, no exports, no SQL.
 
 It runs entirely on your own computer, with your own Planhat API token — no third-party service between your AI and your customer data.
-
----
 
 ## Install in Claude Desktop
 
 The whole install: download one file, double-click it, paste your token into a dialog. No terminal, no config files, no code. Two minutes.
 
 1. **Get `uv`** (one-time — skip if you already have it): `brew install uv` on macOS, or see [the uv install guide](https://docs.astral.sh/uv/getting-started/installation/) for Windows. Claude Desktop uses it to run this server in its own isolated environment.
-2. **[⬇ Download planhat-mcp.mcpb](https://github.com/da-troll/planhat-mcp/releases/latest/download/planhat-mcp.mcpb)** — always the latest release.
-3. **Double-click the downloaded file.** Claude Desktop opens an install dialog — review it and click **Install**.
+2. **[Download the .mcpb file](https://github.com/da-troll/planhat-mcp/releases/latest/download/planhat-mcp.mcpb)**.
+3. **Double-click the downloaded file.** Claude Desktop opens an install pop-up — review it and click **Install**.
 4. **Paste your Planhat API token** into the token field. It's stored in your system keychain, never in a file on disk. (An admin can create a token in Planhat under **Settings → Service Accounts (Private Apps) → API Access Token**.) Optionally tick **Read-only mode** or **Disable delete tools** to cap what the AI can ever do.
 
 Then ask Claude: *"List my top 3 Planhat companies."* If you get an answer, you're done. 🎉
@@ -79,8 +76,6 @@ The token stays in that one file on your machine. Treat it like a password.
 ```
 
 Restart the client and test with the same question as above.
-
----
 
 ## What Claude can do with it
 
